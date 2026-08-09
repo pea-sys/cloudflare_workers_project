@@ -13,23 +13,22 @@
 
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-		const method = request.method;
+		const url = new URL(request.url);
+		const path = url.pathname;
 
-		switch (method) {
-			case "GET":
-			case "POST":
-			case "PUT":
-			case "DELETE":{
-				return new Response(`${method}リクエストを受け取りました`, {
-					headers: { "Content-Type": "text//plain;charset=UTF-8" },
-				});
-			}
-			default: {
-				return new Response(`サポートされていないメソッド：	${method}`, {
-					status: 405,
-					headers: { "Content-Type": "text//plain;charset=UTF-8" },
-				});
-			}
+		if (path === '/' || path === '/home') {
+			return new Response('ホームページ', {
+				headers: { 'Contet-Type': 'text/plain;charset=UTF-8' },
+			});
+		} else if (path === '/about') {
+			return new Response('お問い合わせページです', {
+				headers: { 'Contet-Type': 'text/plain;charset=UTF-8' },
+			});
+		} else {
+			return new Response('ページが見つかりません', {
+				status: 404,
+				headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+			});
 		}
 	},
 } satisfies ExportedHandler<Env>;
