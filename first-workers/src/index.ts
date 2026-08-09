@@ -1,66 +1,101 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Bind resources to your worker in `wrangler.jsonc`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
+import { Hono } from 'hono';
+
+const users = [
+	{ id: 1, name: '山田太郎', email: 'taro@example.com' },
+	{ id: 2, name: '佐藤花子', email: 'hanako@example.com' },
+	{ id: 3, name: '鈴木一郎', email: 'ichiro@example.com' },
+];
+
+const app = new Hono();
+
+app.get('/', (c) => {
+	return c.text('ホームページです');
+});
+
+app.get('/about', (c) => {
+	return c.text('アバウトページです');
+});
+
+app.get('/users/:id', (c) => {
+	const id = c.req.param('id');
+	return c.text(`ユーザーID: ${id}のプロフィールページです`);
+});
+
+app.get('/api/users', async (c) => {
+	return c.json({ users });
+});
+app.post('/api/users', async (c) => {
+	try {
+		const { name, email } = await c.req.json();
+
+		if (!name || !email) {
+			return c.json({ error: 'Name and email are required' }, 400);
+		}
+
+		return c.json(
+			{
+				message: 'User created successfully',
+				user: { id: 4, name, email },
+			},
+			201,
+		);
+	} catch (error) {
+		return c.json({ error: 'Invalid request body' }, 400);
+	}
+});
+
+app.get('/api/users/:id', async (c) => {
+	const id = Number(c.req.param('id'));
+	const user = users.find((u) => u.id === id);
+
+	if (user) {
+		return c.json({ user });
+	} else {
+		return c.json({ error: 'User not found' }, 404);
+	}
+});
+
+app.put('/api/users/:id', async (c) => {
+	try {
+		const id = Number(c.req.param('id'));
+		const updates = await c.req.json();
+
+		if (Object.keys(updates).length === 0) {
+			return c.json({ error: 'No update data provided' }, 400);
+		}
+
+		return c.json({
+			message: 'User updated successfully',
+			user: { id, ...updates },
+		});
+	} catch (error) {
+		return c.json({ error: 'Invalid Request body' }, 400);
+	}
+});
+
+app.delete('/api/users/:id', async (c) => {
+	const id = Number(c.req.param('id'));
+	return c.json({
+		message: 'User deleted successfully',
+		id,
+	});
+});
+
+app.notFound((c) => {
+	return c.json({ error: 'Not found' }, 404);
+});
+
+app.onError((err, c) => {
+	console.error('Unexpected error:', err);
+	return c.json(
+		{
+			error: 'Internal server error',
+			message: err.message,
+		},
+		500,
+	);
+});
 
 export default {
-	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-		const method = request.method;
-		const url = new URL(request.url);
-		const path = url.pathname;
-
-		if (method === 'GET') {
-			if (path === '/' || path === '/home') {
-				return new Response('ホームページ', {
-					headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-				});
-			} else if (path === '/about') {
-				return new Response('お問い合わせページです', {
-					headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-				});
-			} else if (path.startsWith('/users/')) {
-				const userId = path.split('/')[2];
-				return new Response(`ユーザーID: ${userId}のプロフィールページです`, {
-					headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-				});
-			}
-		} else if (method === 'POST') {
-			if (path === '/users') {
-				return new Response('新規ユーザーを作成しました', {
-					status: 201,
-					headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-				});
-			} else if (path === '/login') {
-				return new Response('ログインしました', {
-					headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-				});
-			}
-		} else if (method === 'PUT') {
-			if (path.startsWith('/users/')) {
-				const userId = path.split('/')[2];
-				return new Response(`ユーザーID: ${userId}の情報を更新しました`, {
-					headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-				});
-			}
-		} else if (method === 'DELETE') {
-			if (path.startsWith('/users/')) {
-				const userId = path.split('/')[2];
-				return new Response(`ユーザーID: ${userId}を削除しました`, {
-					headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-				});
-			}
-		}
-		return new Response('ページが見つかりません', {
-			status: 404,
-			headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-		});
-	},
+	fetch: app.fetch,
 } satisfies ExportedHandler<Env>;
