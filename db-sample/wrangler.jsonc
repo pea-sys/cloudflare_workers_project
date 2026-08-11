@@ -1,0 +1,8 @@
+{
+  "d1_databases": [
+  {
+    "binding": "edge_blog_db",
+    "database_name": "edge-blog-db",
+    "database_id": "293861d3-927a-45a0-a182-0c4c9b77fdb7"
+  }]
+}
